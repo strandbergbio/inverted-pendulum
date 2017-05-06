@@ -19,32 +19,40 @@ CARTHEIGHT = 10
 PENDULUMLENGTH = 200
 PENDULUMWIDTH = 6
 GRAVITY = 0.15
-REFRESHFREQ = 50
+REFRESHFREQ = 100
 
+is_dead = False
 time = 0
 x_cart = windowSurface.get_rect().centerx
 Y_CART = (3 * WINDOWHEIGHT / 4)
-V_CART = 5.0
+v_cart = 0
+A_CART = 0.25
 theta_pend = 0.01
 omega_pend = 0.0
 move = "None"
 
-def update_state(t, x, theta, omega, action):
-    dead = np.pi / 2
-    if abs(theta) >= dead:
-        return t, x, theta, 0
+def update_state(t, x, v, theta, omega, action):
     t += 1
-    if action == "Left" and x > (CARTWIDTH / 2):
-        x -= V_CART
-        # cart motion adds extra angular velocity
-        theta -= V_CART * np.cos(theta) / float(PENDULUMLENGTH)
-    elif action == "Right" and x < (WINDOWWIDTH - (CARTWIDTH / 2)):
-        x += V_CART
-        theta += V_CART * np.cos(theta) / float(PENDULUMLENGTH)
-    theta += omega
-    # torque from gravity
+    x += v
+    if x < 0:
+        x = 0
+        v = 0
+    elif x > WINDOWWIDTH:
+        x = WINDOWWIDTH
+        v = 0
+    theta += omega + v * np.cos(theta) / float(PENDULUMLENGTH)
     omega += GRAVITY * np.sin(theta) / float(PENDULUMLENGTH)
-    return t, x, theta, omega
+    if action == "Left" and x > (CARTWIDTH / 2):
+        v -= A_CART
+    elif action == "Right" and x < (WINDOWWIDTH - (CARTWIDTH / 2)):
+        v += A_CART
+    elif action == "None":
+        v = 0
+    if abs(theta) >= np.pi / 2:
+        is_dead = True
+    else:
+        is_dead = False
+    return t, x, v, theta, omega, is_dead
 
 def rotation_matrix(theta):
     return np.array([[np.cos(theta), np.sin(theta)],
@@ -85,17 +93,20 @@ while True:
             if event.key == K_ESCAPE:
                 pygame.quit()
                 sys.exit()
-    time, x_cart, theta_pend, omega_pend = update_state(time, x_cart,
-                                                        theta_pend,
-                                                        omega_pend, move)
-    time_text = basicFont.render('t = {} s'.format(time / float(REFRESHFREQ)),
-                                 True, BLACK, WHITE)
-    time_text_rect = time_text.get_rect()
-    time_text_rect.center = (0.5 * WINDOWWIDTH, 0.5 * WINDOWHEIGHT)
-    windowSurface.blit(time_text, time_text_rect)
+    time, x_cart, v_cart, theta_pend, omega_pend, is_dead = update_state(time, x_cart,
+                                                                         v_cart, theta_pend,
+                                                                         omega_pend, move)
+    
     
     windowSurface.fill(WHITE)
     drawCart(x_cart, theta_pend, windowSurface)
+    
+    time_text = basicFont.render('t = {}'.format(time / float(REFRESHFREQ)),
+                                 True, BLACK, WHITE)
+    time_text_rect = time_text.get_rect()
+    time_text_rect.topleft = (0.1 * WINDOWWIDTH, 0.1 * WINDOWHEIGHT)
+    windowSurface.blit(time_text, time_text_rect)
+    
     pygame.display.update()
 
     mainClock.tick(REFRESHFREQ)
