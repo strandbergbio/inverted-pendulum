@@ -76,6 +76,9 @@ class InvertedPendulumGame(object):
         self.PENDULUMLENGTH = penddims[1]
 
         self.Y_CART = self.pendulum.Y_CART
+        # self.time gives time in frames
+        self.time = 0
+        self.high_score = 0
         
         pygame.init()
         self.clock = pygame.time.Clock()
@@ -83,6 +86,7 @@ class InvertedPendulumGame(object):
         self.REFRESHFREQ = refreshfreq
         self.surface = pygame.display.set_mode(windowdims,0,32)
         pygame.display.set_caption('Inverted Pendulum Game')
+        # array specifying corners of pendulum to be drawn
         self.static_pendulum_array = np.array(
             [[-self.PENDULUMWIDTH / 2, 0],
              [self.PENDULUMWIDTH / 2, 0],
@@ -90,7 +94,6 @@ class InvertedPendulumGame(object):
              [-self.PENDULUMWIDTH / 2, -self.PENDULUMLENGTH]]).T
         self.BLACK = (0,0,0)
         self.WHITE = (255,255,255)
-        self.high_score = 0
 
     def draw_cart(self, x, theta):
         cart = pygame.Rect(x - self.CARTWIDTH // 2, self.Y_CART, self.CARTWIDTH, self.CARTHEIGHT)
@@ -167,6 +170,7 @@ class InvertedPendulumGame(object):
             self.clock.tick(self.REFRESHFREQ)
         if (self.time_seconds()) > self.high_score:
             self.high_score = self.time_seconds()
+        # display end of round screen
         self.surface.fill(self.WHITE)
         self.draw_cart(x, theta)
         self.render_text("Score: {}".format(self.time_seconds()),
@@ -195,5 +199,5 @@ class InvertedPendulumGame(object):
 def main():
     inv = InvertedPendulumGame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART, REFRESHFREQ)
     inv.game()
-    
+
 main()
