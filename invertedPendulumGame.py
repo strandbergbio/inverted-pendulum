@@ -170,9 +170,10 @@ class InvertedPendulumGame(object):
             self.clock.tick(self.REFRESHFREQ)
         if (self.time_seconds()) > self.high_score:
             self.high_score = self.time_seconds()
-        # display end of round screen
+
+    def end_of_round(self):
         self.surface.fill(self.WHITE)
-        self.draw_cart(x, theta)
+        self.draw_cart(self.pendulum.x_cart, self.pendulum.theta)
         self.render_text("Score: {}".format(self.time_seconds()),
                          (0.5 * self.WINDOWWIDTH, 0.3 * self.WINDOWHEIGHT))
         self.render_text("High Score : {}".format(self.high_score),
@@ -192,6 +193,7 @@ class InvertedPendulumGame(object):
                 if event.type == KEYDOWN:
                     if event.key == K_RETURN:
                         self.game_round()
+                        self.end_of_round()
                     if event.key == K_ESCAPE:
                         pygame.quit()
                         sys.exit()
