@@ -2,7 +2,7 @@ import pygame, sys
 import numpy as np
 from pygame.locals import *
 
-WINDOWDIMS = (1000, 700)
+WINDOWDIMS = (1200, 600)
 CARTDIMS = (50, 10)
 PENDULUMDIMS = (6, 200)
 GRAVITY = 0.13
@@ -39,11 +39,11 @@ class InvertedPendulum(object):
             raise RuntimeError("tried to call update_state while state was dead")
         self.time += 1
         self.x_cart += self.v_cart
-        if self.x_cart < 0:
-            self.x_cart = 0
+        if self.x_cart < self.CARTWIDTH / 2:
+            self.x_cart = self.CARTWIDTH / 2
             self.v_cart = 0
-        elif self.x_cart > self.WINDOWWIDTH:
-            self.x_cart = self.WINDOWWIDTH
+        elif self.x_cart > self.WINDOWWIDTH - self.CARTWIDTH / 2:
+            self.x_cart = self.WINDOWWIDTH - self.CARTWIDTH / 2
             self.v_cart = 0
         self.theta += self.omega + self.v_cart * np.cos(self.theta) / float(self.PENDULUMLENGTH)
         self.omega += self.GRAVITY * np.sin(self.theta) / float(self.PENDULUMLENGTH)
@@ -101,6 +101,9 @@ class InvertedPendulumGame(InvertedPendulum):
             text_rect.topleft = point
         self.surface.blit(text_render, text_rect)
 
+    def time_seconds(self):
+        return self.time / float(self.REFRESHFREQ)
+
     def starting_page(self):
         self.surface.fill(self.WHITE)
         self.render_text("Inverted Pendulum Game",
@@ -136,18 +139,27 @@ class InvertedPendulumGame(InvertedPendulum):
             self.surface.fill(self.WHITE)
             self.draw_cart()
 
-            time_text = "t = {}".format(self.time / float(self.REFRESHFREQ))
+            time_text = "t = {}".format(self.time_seconds())
             self.render_text(time_text, (0.1 * self.WINDOWWIDTH, 0.1 * self.WINDOWHEIGHT),
                              position = "topleft", fontsize = 40)
             
             pygame.display.update()
             self.clock.tick(self.REFRESHFREQ)
-            
-        if (self.time / float(self.REFRESHFREQ)) > self.high_score:
-            self.high_score = self.time / float(self.REFRESHFREQ)
-
-    def display_after_round(self):
-        return None
+        
+    def end_round(self):
+        if (self.time_seconds()) > self.high_score:
+            self.high_score = self.time_seconds()
+        self.surface.fill(self.WHITE)
+        self.draw_cart()
+        self.render_text("Score: {}".format(self.time_seconds()),
+                         (0.4 * self.WINDOWWIDTH, 0.4 * self.WINDOWHEIGHT),
+                         position = "topleft")
+        self.render_text("High Score : {}".format(self.high_score),
+                         (0.4 * self.WINDOWWIDTH, 0.5 * self.WINDOWHEIGHT),
+                         position = "topleft")
+        self.render_text("Enter to play again, ESC to exit",
+                         (0.5 * self.WINDOWWIDTH, 0.6 * self.WINDOWHEIGHT))
+        pygame.display.update()
 
     def game(self):
         self.starting_page()
@@ -159,6 +171,7 @@ class InvertedPendulumGame(InvertedPendulum):
                 if event.type == KEYDOWN:
                     if event.key == K_RETURN:
                         self.game_round()
+                        self.end_round()
                     if event.key == K_ESCAPE:
                         pygame.quit()
                         sys.exit()
