@@ -106,8 +106,11 @@ class InvertedPendulumGame(InvertedPendulum):
 
     def starting_page(self):
         self.surface.fill(self.WHITE)
-        self.render_text("Inverted Pendulum Game",
+        self.render_text("Inverted Pendulum",
                          (0.5 * self.WINDOWWIDTH, 0.4 * self.WINDOWHEIGHT))
+        self.render_text("A Game by Adam Strandberg",
+                         (0.5 * self.WINDOWWIDTH, 0.5 * self.WINDOWHEIGHT),
+                         fontsize = 30)
         self.render_text("Press Enter to Begin",
                          (0.5 * self.WINDOWWIDTH, 0.7 * self.WINDOWHEIGHT),
                          fontsize = 30)
@@ -152,13 +155,12 @@ class InvertedPendulumGame(InvertedPendulum):
         self.surface.fill(self.WHITE)
         self.draw_cart()
         self.render_text("Score: {}".format(self.time_seconds()),
-                         (0.4 * self.WINDOWWIDTH, 0.4 * self.WINDOWHEIGHT),
-                         position = "topleft")
+                         (0.5 * self.WINDOWWIDTH, 0.3 * self.WINDOWHEIGHT))
         self.render_text("High Score : {}".format(self.high_score),
-                         (0.4 * self.WINDOWWIDTH, 0.5 * self.WINDOWHEIGHT),
-                         position = "topleft")
-        self.render_text("Enter to play again, ESC to exit",
-                         (0.5 * self.WINDOWWIDTH, 0.6 * self.WINDOWHEIGHT))
+                         (0.5 * self.WINDOWWIDTH, 0.4 * self.WINDOWHEIGHT))
+        self.render_text("(Enter to play again, ESC to exit)",
+                         (0.5 * self.WINDOWWIDTH, 0.85 * self.WINDOWHEIGHT),
+                         fontsize = 30)
         pygame.display.update()
 
     def game(self):
