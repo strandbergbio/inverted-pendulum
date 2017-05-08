@@ -24,27 +24,31 @@ class InvertedPendulum(object):
         self.reset_state()
 
     def reset_state(self):
-        self.time = 0
+        """initializes pendulum in upright state with small perturbation"""
         self.is_dead = False
         self.time = 0
         self.x_cart = self.WINDOWWIDTH / 2
         self.Y_CART = 3 * self.WINDOWHEIGHT / 4
         self.v_cart = 0
+        # angle of pendulum (theta = 0 upright, omega positive into the screen)
         self.theta = np.random.uniform(-0.01,0.01)
         self.omega = 0
 
     def update_state(self, action):
+        """all the physics is here"""
         assert isinstance(action, str)
         if self.is_dead:
             raise RuntimeError("tried to call update_state while state was dead")
         self.time += 1
         self.x_cart += self.v_cart
+        # cart stops when it hits the wall
         if self.x_cart < self.CARTWIDTH / 2:
             self.x_cart = self.CARTWIDTH / 2
             self.v_cart = 0
         elif self.x_cart > self.WINDOWWIDTH - self.CARTWIDTH / 2:
             self.x_cart = self.WINDOWWIDTH - self.CARTWIDTH / 2
             self.v_cart = 0
+        # term from angular velocity + term from motion of cart
         self.theta += self.omega + self.v_cart * np.cos(self.theta) / float(self.PENDULUMLENGTH)
         self.omega += self.GRAVITY * np.sin(self.theta) / float(self.PENDULUMLENGTH)
         if action == "Left":
@@ -57,12 +61,25 @@ class InvertedPendulum(object):
             raise RuntimeError("action must be 'Left', 'Right', or 'None'")
         if abs(self.theta) >= np.pi / 2:
             self.is_dead = True
+        return self.time, self.x_cart, self.v_cart, self.theta, self.omega
 
-class InvertedPendulumGame(InvertedPendulum):
+class InvertedPendulumGame(object):
     def __init__(self, windowdims, cartdims, penddims, gravity, a_cart, refreshfreq):
-        InvertedPendulum.__init__(self, windowdims, cartdims, penddims, gravity, a_cart)
+        self.pendulum = InvertedPendulum(windowdims, cartdims, penddims, gravity, a_cart)
+        
+        self.WINDOWWIDTH = windowdims[0]
+        self.WINDOWHEIGHT = windowdims[1]
+
+        self.CARTWIDTH = cartdims[0]
+        self.CARTHEIGHT = cartdims[1]
+        self.PENDULUMWIDTH = penddims[0]
+        self.PENDULUMLENGTH = penddims[1]
+
+        self.Y_CART = self.pendulum.Y_CART
+        
         pygame.init()
         self.clock = pygame.time.Clock()
+        # specify number of frames / state updates per second
         self.REFRESHFREQ = refreshfreq
         self.surface = pygame.display.set_mode(windowdims,0,32)
         pygame.display.set_caption('Inverted Pendulum Game')
@@ -75,11 +92,11 @@ class InvertedPendulumGame(InvertedPendulum):
         self.WHITE = (255,255,255)
         self.high_score = 0
 
-    def draw_cart(self):
-        cart = pygame.Rect(self.x_cart - self.CARTWIDTH // 2, self.Y_CART, self.CARTWIDTH, self.CARTHEIGHT)
+    def draw_cart(self, x, theta):
+        cart = pygame.Rect(x - self.CARTWIDTH // 2, self.Y_CART, self.CARTWIDTH, self.CARTHEIGHT)
         pygame.draw.rect(self.surface, self.BLACK, cart)
-        pendulum_array = np.dot(self.rotation_matrix(self.theta), self.static_pendulum_array)
-        pendulum_array += np.array([[self.x_cart],[self.Y_CART]])
+        pendulum_array = np.dot(self.rotation_matrix(theta), self.static_pendulum_array)
+        pendulum_array += np.array([[x],[self.Y_CART]])
         pendulum = pygame.draw.polygon(self.surface, self.BLACK,
             ((pendulum_array[0,0],pendulum_array[1,0]),
              (pendulum_array[0,1],pendulum_array[1,1]),
@@ -117,9 +134,9 @@ class InvertedPendulumGame(InvertedPendulum):
         pygame.display.update()
 
     def game_round(self):
-        self.reset_state()
+        self.pendulum.reset_state()
         action = "None"
-        while not self.is_dead:
+        while not self.pendulum.is_dead:
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
@@ -137,10 +154,10 @@ class InvertedPendulumGame(InvertedPendulum):
                     if event.key == K_ESCAPE:
                         pygame.quit()
                         sys.exit()
-            self.update_state(action)
-    
+            t, x, _, theta, _ = self.pendulum.update_state(action)
+            self.time = t    
             self.surface.fill(self.WHITE)
-            self.draw_cart()
+            self.draw_cart(x, theta)
 
             time_text = "t = {}".format(self.time_seconds())
             self.render_text(time_text, (0.1 * self.WINDOWWIDTH, 0.1 * self.WINDOWHEIGHT),
@@ -148,12 +165,10 @@ class InvertedPendulumGame(InvertedPendulum):
             
             pygame.display.update()
             self.clock.tick(self.REFRESHFREQ)
-        
-    def end_round(self):
         if (self.time_seconds()) > self.high_score:
             self.high_score = self.time_seconds()
         self.surface.fill(self.WHITE)
-        self.draw_cart()
+        self.draw_cart(x, theta)
         self.render_text("Score: {}".format(self.time_seconds()),
                          (0.5 * self.WINDOWWIDTH, 0.3 * self.WINDOWHEIGHT))
         self.render_text("High Score : {}".format(self.high_score),
@@ -173,7 +188,6 @@ class InvertedPendulumGame(InvertedPendulum):
                 if event.type == KEYDOWN:
                     if event.key == K_RETURN:
                         self.game_round()
-                        self.end_round()
                     if event.key == K_ESCAPE:
                         pygame.quit()
                         sys.exit()
