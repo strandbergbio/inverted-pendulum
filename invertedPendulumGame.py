@@ -18,7 +18,7 @@ CARTWIDTH = 50
 CARTHEIGHT = 10
 PENDULUMLENGTH = 200
 PENDULUMWIDTH = 6
-GRAVITY = 0.15
+GRAVITY = 0.13
 REFRESHFREQ = 100
 
 is_dead = False
@@ -26,7 +26,7 @@ time = 0
 x_cart = windowSurface.get_rect().centerx
 Y_CART = (3 * WINDOWHEIGHT / 4)
 v_cart = 0
-A_CART = 0.25
+A_CART = 0.16
 theta_pend = 0.01
 omega_pend = 0.0
 move = "None"
@@ -42,9 +42,9 @@ def update_state(t, x, v, theta, omega, action):
         v = 0
     theta += omega + v * np.cos(theta) / float(PENDULUMLENGTH)
     omega += GRAVITY * np.sin(theta) / float(PENDULUMLENGTH)
-    if action == "Left" and x > (CARTWIDTH / 2):
+    if action == "Left":
         v -= A_CART
-    elif action == "Right" and x < (WINDOWWIDTH - (CARTWIDTH / 2)):
+    elif action == "Right":
         v += A_CART
     elif action == "None":
         v = 0
@@ -74,7 +74,6 @@ def drawCart(x, theta, surface):
          (pendulum_array[0,2],pendulum_array[1,2]),
          (pendulum_array[0,3],pendulum_array[1,3])))
 
-
 while True:
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -97,7 +96,6 @@ while True:
                                                                          v_cart, theta_pend,
                                                                          omega_pend, move)
     
-    
     windowSurface.fill(WHITE)
     drawCart(x_cart, theta_pend, windowSurface)
     
@@ -110,3 +108,12 @@ while True:
     pygame.display.update()
 
     mainClock.tick(REFRESHFREQ)
+
+def make_starting_page(surface):
+    surface.fill(WHITE)
+    title = basicFont.render("Inverted Pendulum Game", True, BLACK, WHITE)
+    title_rect = title.get_rect()
+    title_rect.center = surface.center
+    surface.blit(title, title_rect)
+    
+    
