@@ -60,31 +60,32 @@ class MCESagent(object):
         must stop moving in one direction before moving in the other
         """
         x, _, _, _ = coarse_state
-        if previous_action == 'None':
-            if x == self.coarse_xs[0]:
-                return ['None', 'Right']
-            elif x == self.coarse_xs[-1]:
-                return ['Left', 'None']
-            else:
-                return ["Left", "None", "Right"]
-        elif previous_action == 'Left':
-            if x == self.coarse_xs[0]:
-                return ['None']
-            else:
-                return ['Left', 'None']
-        elif previous_action == 'Right':
-            if x == self.coarse_xs[-1]:
-                return ['None']
-            else:
-                return ['None', 'Right']
+        result = ['None']
+        if previous_action != 'Right' and x != self.coarse_xs[-1]:
+            result.append('Left')
+        if previous_action != 'Left' and x != self.coarse_xs[0]:
+            result.append('Right')
+        return result
 
-    def episode(self):
+    def random_init(self):
         x = np.random.uniform(self.pendulum.CARTWIDTH / 2,
                                     self.WINDOWWIDTH - self.pendulum.CARTWIDTH / 2)
         theta = np.random.uniform(-np.pi / 2, np.pi / 2)
         v = np.random.normal(0, 1.0)
         omega = np.random.normal(0, 0.1)
         is_dead = False
+        return is_dead, x, v, theta, omega
+
+    def nice_init(self):
+        is_dead = False
+        x = self.WINDOWWIDTH / 2
+        v = 0
+        theta = np.random.uniform(-0.01, 0.01)
+        omega = 0
+        return is_dead, x, v, theta, omega
+
+    def episode(self, init):
+        is_dead, x, v, theta, omega = init
         self.pendulum.set_state((is_dead, 0, x, v, theta, omega))
         is_dead, state = self.coarse_state()
         state_action = []
@@ -102,19 +103,26 @@ class MCESagent(object):
             previous_action = action
         return state_action
 
-    def update_returns(self, state_action):
+    def update_returns(self, state_action, visit="every-visit"):
         """ updates self.returns AND self.Q"""
-        visited = set()
+        if visit == "first-visit":
+            visited = set()
         for i, sa in enumerate(state_action):
             if len(state_action) == self.max_episode_length:
                 terminal_value = self.max_episode_length
             else:
                 terminal_value = 0
             # only add returns for first time state-action pair appears
-            if sa not in visited:
-                visited.add(sa)
+            if visit == "first-visit":
+                if sa not in visited:
+                    visited.add(sa)
+                    self.returns[sa].append(len(state_action) - i + terminal_value)
+                    self.Q[sa] = np.mean(self.returns[sa])
+            elif visit == "every-visit":
                 self.returns[sa].append(len(state_action) - i + terminal_value)
                 self.Q[sa] = np.mean(self.returns[sa])
+            else:
+                raise ValueError("Invalid argument for visit in update_returns")
         return self.returns
 
     def update_policy(self, state_action):
@@ -123,22 +131,28 @@ class MCESagent(object):
                                      key=(lambda a:self.Q[(previous_action, state, a)]))
         return self.policy
 
-    def run(self, num_runs):
+    def run(self, num_runs, train=True):
         run_durations = []
         for i in range(num_runs):
-            state_action = self.episode()
+            init = self.random_init() if train else self.nice_init()
+            state_action = self.episode(init)
             self.update_returns(state_action)
             self.update_policy(state_action)
             run_durations.append(len(state_action))
         return run_durations
                 
-
 def main():
     pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
-                                GRAVITY, A_CART)
+                                GRAVITY, A_CART)        
     agent = MCESagent(pend, 2000)
-    run_durations = agent.run(30000)
-    plt.scatter(range(len(run_durations)), run_durations)
+    performance = []
+    for i in range(20):
+        agent.run(500)
+        durations = agent.run(100, train=False)
+        avg_duration = np.mean(durations)
+        print "Run {}: Avg Duration {}".format(i, avg_duration)
+        performance.append(avg_duration)
+    plt.scatter(range(len(performance)),performance)
     plt.show()
 
 if __name__ == "__main__":
