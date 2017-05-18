@@ -2,6 +2,8 @@
 
 import invertedPendulumGame as ipg
 import numpy as np
+import matplotlib.pyplot as plt
+from collections import defaultdict
 
 WINDOWDIMS = (1200, 600)
 CARTDIMS = (50, 10)
@@ -34,8 +36,8 @@ class MCESagent(object):
         self.omega_bins = [-0.05, 0.05, np.inf]
         self.coarse_omegas = [-1, 0, 1]
         self.policy = dict()
-        self.returns = dict()
-        self.Q = dict()
+        self.returns = defaultdict(list)
+        self.Q = defaultdict(float)
 
     @staticmethod
     def fine_to_coarse(value, bins, labels):
@@ -86,34 +88,58 @@ class MCESagent(object):
         self.pendulum.set_state((is_dead, 0, x, v, theta, omega))
         is_dead, state = self.coarse_state()
         state_action = []
+        previous_action = 'None'
         i = 0
         while not is_dead and i < self.max_episode_length:
             i += 1
             if state in self.policy:
                 action = self.policy[state]
             else:
-                action = np.random.choice(self.actions(previous_action, state))
+                action = 'None'
             self.pendulum.update_state(action)
             is_dead, state = self.coarse_state()
-            state_action.append((state, action))
+            state_action.append((previous_action, state, action))
             previous_action = action
-        visited = set()
-        
         return state_action
-            
-pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
-                            GRAVITY, A_CART)
-agent = MCESagent(pend, 200)
-print(agent.coarse_state())
-print(agent.episode())
 
+    def update_returns(self, state_action):
+        """ updates self.returns AND self.Q"""
+        visited = set()
+        for i, sa in enumerate(state_action):
+            if len(state_action) == self.max_episode_length:
+                terminal_value = self.max_episode_length
+            else:
+                terminal_value = 0
+            # only add returns for first time state-action pair appears
+            if sa not in visited:
+                visited.add(sa)
+                self.returns[sa].append(len(state_action) - i + terminal_value)
+                self.Q[sa] = np.mean(self.returns[sa])
+        return self.returns
 
-    
+    def update_policy(self, state_action):
+        for (previous_action, state, action) in set(state_action):
+            self.policy[state] = max(self.actions(previous_action, state),
+                                     key=(lambda a:self.Q[(previous_action, state, a)]))
+        return self.policy
 
-    
+    def run(self, num_runs):
+        run_durations = []
+        for i in range(num_runs):
+            state_action = self.episode()
+            self.update_returns(state_action)
+            self.update_policy(state_action)
+            run_durations.append(len(state_action))
+        return run_durations
+                
 
-            
-        
-        
-        
-        
+def main():
+    pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
+                                GRAVITY, A_CART)
+    agent = MCESagent(pend, 2000)
+    run_durations = agent.run(30000)
+    plt.scatter(range(len(run_durations)), run_durations)
+    plt.show()
+
+if __name__ == "__main__":
+    main()
