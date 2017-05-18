@@ -21,6 +21,7 @@ class InvertedPendulum(object):
 
         self.GRAVITY = gravity
         self.A_CART = a_cart
+        self.Y_CART = 3 * self.WINDOWHEIGHT / 4
         self.reset_state()
 
     def reset_state(self):
@@ -28,11 +29,23 @@ class InvertedPendulum(object):
         self.is_dead = False
         self.time = 0
         self.x_cart = self.WINDOWWIDTH / 2
-        self.Y_CART = 3 * self.WINDOWHEIGHT / 4
         self.v_cart = 0
         # angle of pendulum (theta = 0 upright, omega positive into the screen)
         self.theta = np.random.uniform(-0.01,0.01)
         self.omega = 0
+
+    def get_state(self):
+        return (self.is_dead, self.time, self.x_cart,
+                self.v_cart, self.theta, self.omega)
+
+    def set_state(self, state):
+        is_dead, t, x, v, theta, omega = state
+        self.is_dead = is_dead
+        self.time = t
+        self.x_cart = x
+        self.v_cart = v
+        self.theta = theta
+        self.omega = omega
 
     def update_state(self, action):
         """all the physics is here"""
@@ -42,10 +55,10 @@ class InvertedPendulum(object):
         self.time += 1
         self.x_cart += self.v_cart
         # cart stops when it hits the wall
-        if self.x_cart < self.CARTWIDTH / 2:
+        if self.x_cart <= self.CARTWIDTH / 2:
             self.x_cart = self.CARTWIDTH / 2
             self.v_cart = 0
-        elif self.x_cart > self.WINDOWWIDTH - self.CARTWIDTH / 2:
+        elif self.x_cart >= self.WINDOWWIDTH - self.CARTWIDTH / 2:
             self.x_cart = self.WINDOWWIDTH - self.CARTWIDTH / 2
             self.v_cart = 0
         # term from angular velocity + term from motion of cart
@@ -64,7 +77,8 @@ class InvertedPendulum(object):
         return self.time, self.x_cart, self.v_cart, self.theta, self.omega
 
 class InvertedPendulumGame(object):
-    def __init__(self, windowdims, cartdims, penddims, gravity, a_cart, refreshfreq):
+    def __init__(self, windowdims, cartdims, penddims,
+                 gravity, a_cart, refreshfreq):
         self.pendulum = InvertedPendulum(windowdims, cartdims, penddims, gravity, a_cart)
         
         self.WINDOWWIDTH = windowdims[0]
@@ -202,4 +216,5 @@ def main():
     inv = InvertedPendulumGame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART, REFRESHFREQ)
     inv.game()
 
-main()
+if __name__ == '__main__':
+    main()
