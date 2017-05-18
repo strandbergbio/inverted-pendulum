@@ -137,7 +137,7 @@ def main():
     pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
                                 GRAVITY, A_CART)
     agent = MCESagent(pend, 2000)
-    run_durations = agent.run(300)
+    run_durations = agent.run(30000)
     plt.scatter(range(len(run_durations)), run_durations)
     plt.show()
 
