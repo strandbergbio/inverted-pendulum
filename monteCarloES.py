@@ -4,6 +4,8 @@ import invertedPendulumGame as ipg
 import numpy as np
 import matplotlib.pyplot as plt
 import pygame
+import sys
+from pygame.locals import *
 
 WINDOWDIMS = (1200, 600)
 CARTDIMS = (50, 10)
@@ -13,7 +15,7 @@ REFRESHFREQ = 100
 A_CART = 0.15
 
 class MCESagent(object):       
-    def __init__(self, pendulum, max_episode_length):
+    def __init__(self, pendulum, max_episode_length, soft_policy_prob):
         """accepts bin divisions to create discretized states
         x_bins and theta_bins given in range 0 to 1
         v_bins and omega_bins given in actual values
@@ -21,19 +23,24 @@ class MCESagent(object):
         assert isinstance(pendulum, ipg.InvertedPendulum)
         self.pendulum = pendulum
         self.max_episode_length = max_episode_length
+        self.soft_policy_prob = soft_policy_prob
         self.epsilon = 10 ** (-10)
         self.x_bins = [self.pendulum.CARTWIDTH / 2,
+                       self.pendulum.WINDOWWIDTH / 4,
+                       self.pendulum.WINDOWWIDTH * 3 / 4,
                        self.pendulum.WINDOWWIDTH - self.pendulum.CARTWIDTH / 2 - self.epsilon,
                        np.inf]
-        self.coarse_xs = [-1, 0, 1]
-        self.theta_bins = [-np.pi / 2, -0.2, -0.25, 0.25, 0.2,
+        self.coarse_xs = [-2, -1, 0, 1, 2]
+        self.theta_bins = [-np.pi / 2, -0.3, -0.05, 0.05, 0.3,
                            np.pi / 2 - self.epsilon, np.inf]
         self.coarse_thetas = [-3, -2, -1, 0, 1, 2, 3]
-        self.v_bins = [-2 * self.pendulum.A_CART,
-                       2 * self.pendulum.A_CART, np.inf]
-        self.coarse_vs = [-1, 0, 1]
-        self.omega_bins = [-0.05, 0.05, np.inf]
-        self.coarse_omegas = [-1, 0, 1]
+        self.v_bins = [-10 * self.pendulum.A_CART,
+                       -2 * self.pendulum.A_CART,
+                       2 * self.pendulum.A_CART,
+                       10 * self.pendulum.A_CART, np.inf]
+        self.coarse_vs = [-2, -1, 0, 1, 2]
+        self.omega_bins = [-0.01, -0.001, 0.001, 0.01, np.inf]
+        self.coarse_omegas = [-2, -1, 0, 1, 2]
         self.policy = dict()
         self.Q = dict()
 
@@ -91,7 +98,8 @@ class MCESagent(object):
         i = 0
         while not is_dead and i < self.max_episode_length:
             i += 1
-            if (previous_action, state) in self.policy:
+            p = np.random.uniform(0,1)
+            if (previous_action, state) in self.policy and p > self.soft_policy_prob:
                 action = self.policy[(previous_action, state)]
             else:
                 action = np.random.choice(self.actions(previous_action, state))
@@ -107,7 +115,7 @@ class MCESagent(object):
         plt.scatter(range(len(theta_coarse)), theta_coarse)
         plt.show()
 
-    def update_returns(self, state_action, visit="first-visit"):
+    def update_returns(self, state_action, visit="every-visit"):
         """ updates self.returns AND self.Q"""
         if visit == "first-visit":
             visited = set()
@@ -161,17 +169,17 @@ class MCESagent(object):
 
 class MCESgame(ipg.InvertedPendulumGame):
     def __init__(self, windowdims, cartdims, penddims,
-                  gravity, a_cart, refreshfreq, agent):
+                 gravity, a_cart, refreshfreq, agent):
         assert isinstance(agent, MCESagent)
-        super(MCESgame, self).__init__(windowdims, cartdims, penddims, gravity, a_cart, refreshfreq)
         self.agent = agent
-        self.pendulum = agent.pendulum
+        super(MCESgame, self).__init__(windowdims, cartdims, penddims,
+                                       gravity, a_cart, refreshfreq,
+                                       agent.pendulum)
 
     def game_round(self):
         self.agent.pendulum.reset_state()
         previous_action = "None"
-        is_dead = False
-        while not is_dead:
+        while not self.agent.pendulum.is_dead:
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
@@ -194,35 +202,58 @@ class MCESgame(ipg.InvertedPendulumGame):
             time_text = "t = {}".format(self.time_seconds())
             self.render_text(time_text, (0.1 * self.WINDOWWIDTH, 0.1 * self.WINDOWHEIGHT),
                              position = "topleft", fontsize = 40)
+            if action == 'Left':
+                action_text = '<-       '
+            elif action == 'None':
+                action_text = '    |    '
+            elif action == 'Right':
+                action_text = '       ->'
+            self.render_text(action_text, (0.1 * self.WINDOWWIDTH, 0.2 * self.WINDOWHEIGHT),
+                             position = "topleft", fontsize = 40)
+            state_text = str(state)
+            self.render_text(state_text, (0.1 * self.WINDOWWIDTH, 0.3 * self.WINDOWHEIGHT),
+                             position = "topleft", fontsize = 40)
             
             pygame.display.update()
             self.clock.tick(self.REFRESHFREQ)
         if (self.time_seconds()) > self.high_score:
             self.high_score = self.time_seconds()
-        
+
+    def game(self):
+        self.starting_page()
+        while True:
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == KEYDOWN:
+                    if event.key == K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+                self.clock.tick(15 * self.REFRESHFREQ)
+                self.game_round()
+                self.end_of_round()
         
 def main():
     pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
                                 GRAVITY, A_CART)        
-    agent = MCESagent(pend, 2000)
+    agent = MCESagent(pend, 2000, 0.05)
     agent.test()
-    game = MCESgame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART,
-                    REFRESHFREQ, agent)
-    game.game()
-##    performance = []
-##    for i in range(500):
-##        agent.run(100)
-##        durations = agent.run(100, train=False)
-##        avg_duration = np.mean(durations)
-##        performance.append(avg_duration)
-##        print "Step: {}, Average Duration {}".format(i, avg_duration)
+    performance = []
+    for i in range(500):
+        agent.run(200)
+        durations = agent.run(200, train=False)
+        avg_duration = np.mean(durations)
+        performance.append(avg_duration)
+        print "Step: {}, Average Duration {}".format(i, avg_duration)
 ##        if i % 50 == 0:
 ##            e = agent.episode(agent.nice_init())
 ##            agent.plot_episode(e)
 ##        if i % 150 == 0:
 ##            print agent.policy
-##    plt.scatter(range(len(performance)),performance)
-##    plt.show()
+    game = MCESgame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART,
+                    REFRESHFREQ, agent)
+    game.game()
 
 if __name__ == "__main__":
     main() 
