@@ -35,8 +35,8 @@ class MCESagent(object):
                            np.pi / 2 - self.epsilon, np.inf]
         self.coarse_thetas = [-3, -2, -1, 0, 1, 2, 3]
         self.v_bins = [-10 * self.pendulum.A_CART,
-                       -2 * self.pendulum.A_CART,
-                       2 * self.pendulum.A_CART,
+                       -1 * self.pendulum.A_CART,
+                       self.pendulum.A_CART - self.epsilon,
                        10 * self.pendulum.A_CART, np.inf]
         self.coarse_vs = [-2, -1, 0, 1, 2]
         self.omega_bins = [-0.01, -0.001, 0.001, 0.01, np.inf]
@@ -230,9 +230,9 @@ class MCESgame(ipg.InvertedPendulumGame):
                     if event.key == K_ESCAPE:
                         pygame.quit()
                         sys.exit()
-                self.clock.tick(15 * self.REFRESHFREQ)
-                self.game_round()
-                self.end_of_round()
+            self.game_round()
+            self.end_of_round()
+            pygame.time.wait(500)
         
 def main():
     pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
@@ -240,12 +240,12 @@ def main():
     agent = MCESagent(pend, 2000, 0.05)
     agent.test()
     performance = []
-    for i in range(500):
+    for i in range(1):
         agent.run(200)
         durations = agent.run(200, train=False)
         avg_duration = np.mean(durations)
         performance.append(avg_duration)
-        print "Step: {}, Average Duration {}".format(i, avg_duration)
+        print "Step: {}, Average Duration {}".format(i+1, avg_duration)
 ##        if i % 50 == 0:
 ##            e = agent.episode(agent.nice_init())
 ##            agent.plot_episode(e)
