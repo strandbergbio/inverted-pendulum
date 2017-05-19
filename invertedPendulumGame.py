@@ -78,8 +78,11 @@ class InvertedPendulum(object):
 
 class InvertedPendulumGame(object):
     def __init__(self, windowdims, cartdims, penddims,
-                 gravity, a_cart, refreshfreq):
-        self.pendulum = InvertedPendulum(windowdims, cartdims, penddims, gravity, a_cart)
+                 gravity, a_cart, refreshfreq, pendulum = None):
+        if pendulum is None:
+            self.pendulum = InvertedPendulum(windowdims, cartdims, penddims, gravity, a_cart)
+        else:
+            self.pendulum = pendulum
         
         self.WINDOWWIDTH = windowdims[0]
         self.WINDOWHEIGHT = windowdims[1]
