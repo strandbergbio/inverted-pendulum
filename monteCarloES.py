@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pygame
 import sys
 from pygame.locals import *
+from collection import defaultdict
 
 WINDOWDIMS = (1200, 600)
 CARTDIMS = (50, 10)
