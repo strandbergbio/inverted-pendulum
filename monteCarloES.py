@@ -113,14 +113,18 @@ class MCESagent(object):
         state_actions = []
         i = 0
         while not is_dead and i < self.max_episode_length:
+            # Check the state you will go into
             self.pendulum.update_state(action)
             is_dead, new_state = self.coarse_state()
             old_Q = self.Q[(previous_action, state, action)]
-            new_Q = self.Q[(action, new_state, self.optimal_policy(action, new_state))]           
+            new_Q = self.Q[(action, new_state, self.optimal_policy(action, new_state))]
+            # Update the value estimate
             self.Q[(previous_action, state, action)] += self.alpha * (1 + new_Q - old_Q)
             state_actions.append((previous_action, state, action))
+            # Change your state
             previous_action, state = action, new_state
             action = policy(previous_action, state)
+            i += 1
         return state_actions
 
     @staticmethod
