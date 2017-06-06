@@ -2,9 +2,10 @@
 
 import invertedPendulumGame as ipg
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pygame
-import sys
+import sys, os, argparse
+import pickle
 from pygame.locals import *
 from collections import defaultdict
 
@@ -208,21 +209,31 @@ class MCESgame(ipg.InvertedPendulumGame):
             pygame.time.wait(500)
         
 def main():
-    pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
-                                GRAVITY, A_CART)        
-    agent = MCESagent(pend, 20000, 0.1, 0.05)
-    agent.test()
-    performance = []
-    for i in range(20):
-        agent.run(100)
-        durations = agent.run(50, train=False, policy=agent.optimal_policy)
-        avg_duration = np.mean(durations)
-        performance.append(avg_duration)
-        print "Step: {}, Average Duration {}".format(i+1, avg_duration)
-        if i % 50 == 0:
-            e = agent.episode(agent.nice_init())
-            agent.plot_episode(e)
-
+    parser = argparse.ArgumentParser(
+        description="Pass name of pickle to use or write to")
+    parser.add_argument('filename', type=str)
+    args = parser.parse_args()
+    FILEPATH = os.getcwd() + "/" + args.filename + ".pickle"
+    if os.path.exists(FILEPATH):
+        with open(FILEPATH, 'rb') as f:
+            agent = pickle.load(f)
+    else:
+        pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
+                                    GRAVITY, A_CART)        
+        agent = MCESagent(pend, 20000, 0.1, 0.05)
+        agent.test()
+        performance = []
+        for i in range(10):
+            agent.run(100)
+            durations = agent.run(50, train=False, policy=agent.optimal_policy)
+            avg_duration = np.mean(durations)
+            performance.append(avg_duration)
+            print("Step: {}, Average Duration {}".format(i+1, avg_duration))
+    ##        if i % 50 == 0:
+    ##            e = agent.episode(agent.nice_init())
+    ##            agent.plot_episode(e)
+        with open(FILEPATH, 'wb') as output:
+            pickle.dump(agent, output)
     game = MCESgame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART,
                     REFRESHFREQ, agent)
     game.game()

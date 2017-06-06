@@ -1,12 +1,16 @@
-# Monte Carlo with Exploring Starts
+# Q Learner for inverted pendulum game
 
 import invertedPendulumGame as ipg
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+## TODO: fix matplotlib install for python 3.4
 import pygame
+import os
 import sys
+import argparse
+import pickle
 from pygame.locals import *
-from collection import defaultdict
+from collections import defaultdict
 
 WINDOWDIMS = (1200, 600)
 CARTDIMS = (50, 10)
@@ -236,22 +240,33 @@ class MCESgame(ipg.InvertedPendulumGame):
             pygame.time.wait(500)
         
 def main():
-    pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
-                                GRAVITY, A_CART)        
-    agent = MCESagent(pend, 2000, 0.05)
-    agent.test()
-    performance = []
-    for i in range(1):
-        agent.run(200)
-        durations = agent.run(200, train=False)
-        avg_duration = np.mean(durations)
-        performance.append(avg_duration)
-        print "Step: {}, Average Duration {}".format(i+1, avg_duration)
-##        if i % 50 == 0:
-##            e = agent.episode(agent.nice_init())
-##            agent.plot_episode(e)
-##        if i % 150 == 0:
-##            print agent.policy
+    parser = argparse.ArgumentParser(
+        description="Pass name of pickle to use or write to")
+    parser.add_argument('filename', type=str)
+    args = parser.parse_args()
+    FILEPATH = os.getcwd() + "/" + args.filename + ".pickle"
+    if os.path.exists(FILEPATH):
+        with open(FILEPATH, 'rb') as f:
+            agent = pickle.load(f)
+    else:
+        pend = ipg.InvertedPendulum(WINDOWDIMS, CARTDIMS, PENDULUMDIMS,
+                                    GRAVITY, A_CART)        
+        agent = MCESagent(pend, 2000, 0.05)
+        agent.test()
+        performance = []
+        for i in range(40):
+            agent.run(150)
+            durations = agent.run(100, train=False)
+            avg_duration = np.mean(durations)
+            performance.append(avg_duration)
+            print("Step: {}, Average Duration {}".format(i+1, avg_duration))
+    ##        if i % 50 == 0:
+    ##            e = agent.episode(agent.nice_init())
+    ##            agent.plot_episode(e)
+    ##        if i % 150 == 0:
+    ##            print(agent.policy)
+        with open(FILEPATH, 'wb') as output:
+            pickle.dump(agent, output)
     game = MCESgame(WINDOWDIMS, CARTDIMS, PENDULUMDIMS, GRAVITY, A_CART,
                     REFRESHFREQ, agent)
     game.game()
